@@ -1,15 +1,19 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SkillsRadar from '../components/SkillsRadar';
 import CareerCard from '../components/CareerCard';
+import AIMentor from '../components/AIMentor';
 import { motion } from 'framer-motion';
-import { Book, Briefcase, Users, Award, TrendingUp, MapPin } from 'lucide-react';
+import { Book, Briefcase, Users, Award, TrendingUp, MapPin, Bot, RefreshCcw } from 'lucide-react';
 import AnimatedTransition from '../components/AnimatedTransition';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/sonner';
+import { generateCareerMatches, generateLearningPaths } from '@/lib/gemini';
 
 const Dashboard: React.FC = () => {
-  // Sample data for Skills Radar
+  // Skills data for radar chart
   const skillsData = [
     { subject: 'Technical', score: 80, fullMark: 100 },
     { subject: 'Leadership', score: 65, fullMark: 100 },
@@ -19,8 +23,8 @@ const Dashboard: React.FC = () => {
     { subject: 'Adaptability', score: 75, fullMark: 100 },
   ];
   
-  // Sample data for career recommendations
-  const careerRecommendations = [
+  // State for AI-generated data
+  const [careerRecommendations, setCareerRecommendations] = useState([
     {
       title: "UX/UI Designer",
       match: 94,
@@ -45,10 +49,9 @@ const Dashboard: React.FC = () => {
       description: "Analyze and interpret complex data to help organizations make better decisions.",
       skills: ["Statistical Analysis", "Machine Learning", "Python", "Data Visualization", "Problem-solving"]
     }
-  ];
+  ]);
   
-  // Sample learning paths
-  const learningPaths = [
+  const [learningPaths, setLearningPaths] = useState([
     {
       title: "UX Design Fundamentals",
       provider: "Coursera",
@@ -70,7 +73,78 @@ const Dashboard: React.FC = () => {
       level: "Beginner",
       icon: TrendingUp
     }
-  ];
+  ]);
+  
+  const [isGeneratingCareers, setIsGeneratingCareers] = useState(false);
+  const [isGeneratingPaths, setIsGeneratingPaths] = useState(false);
+  
+  // User skills and interests for AI prompts
+  const userSkills = ["JavaScript", "React", "UI Design", "Data Analysis", "Project Management"];
+  const userInterests = ["Technology", "Creative Design", "Problem Solving", "User Experience", "Data Visualization"];
+  
+  const refreshCareerRecommendations = async () => {
+    setIsGeneratingCareers(true);
+    toast.info("Generating AI career recommendations...");
+    
+    try {
+      const aiCareers = await generateCareerMatches(userSkills, userInterests);
+      
+      if (aiCareers && Array.isArray(aiCareers) && aiCareers.length > 0) {
+        setCareerRecommendations(aiCareers);
+        toast.success("Career recommendations updated with AI insights!");
+      }
+    } catch (error) {
+      console.error("Error generating career recommendations:", error);
+      toast.error("Failed to generate career recommendations. Using default data.");
+    } finally {
+      setIsGeneratingCareers(false);
+    }
+  };
+  
+  const refreshLearningPaths = async () => {
+    if (careerRecommendations.length === 0) return;
+    
+    setIsGeneratingPaths(true);
+    toast.info("Generating AI learning path recommendations...");
+    
+    try {
+      // Use the top career recommendation to generate learning paths
+      const topCareer = careerRecommendations[0].title;
+      const aiPaths = await generateLearningPaths(topCareer);
+      
+      if (aiPaths && Array.isArray(aiPaths) && aiPaths.length > 0) {
+        // Map icons to the learning paths
+        const pathsWithIcons = aiPaths.map((path, index) => {
+          const icons = [Book, Briefcase, TrendingUp];
+          return {
+            ...path,
+            icon: icons[index % icons.length]
+          };
+        });
+        
+        setLearningPaths(pathsWithIcons);
+        toast.success("Learning paths updated with AI recommendations!");
+      }
+    } catch (error) {
+      console.error("Error generating learning paths:", error);
+      toast.error("Failed to generate learning paths. Using default data.");
+    } finally {
+      setIsGeneratingPaths(false);
+    }
+  };
+
+  // Generate AI recommendations on initial load (commented out for now to avoid API calls on every load)
+  /*
+  useEffect(() => {
+    refreshCareerRecommendations();
+  }, []);
+  
+  useEffect(() => {
+    if (careerRecommendations.length > 0) {
+      refreshLearningPaths();
+    }
+  }, [careerRecommendations]);
+  */
 
   return (
     <AnimatedTransition>
@@ -130,6 +204,11 @@ const Dashboard: React.FC = () => {
                   transition={{ duration: 0.5 }}
                 >
                   <h1 className="text-3xl font-bold mb-6">Your Career Dashboard</h1>
+                  
+                  {/* AI Mentor */}
+                  <div className="mb-8">
+                    <AIMentor />
+                  </div>
                   
                   {/* Skills Analysis */}
                   <div className="bg-white rounded-xl shadow-card p-6 mb-8 border border-gray-100">
@@ -196,7 +275,24 @@ const Dashboard: React.FC = () => {
                         <span className="feature-chip mb-2">AI Recommendations</span>
                         <h2 className="text-xl font-semibold">Your Top Career Matches</h2>
                       </div>
-                      <button className="text-career-blue-600 font-medium hover:underline">View All</button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex items-center gap-1"
+                          onClick={refreshCareerRecommendations}
+                          disabled={isGeneratingCareers}
+                        >
+                          <RefreshCcw size={16} className={isGeneratingCareers ? "animate-spin" : ""} />
+                          <span>Refresh with AI</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                        >
+                          View All
+                        </Button>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -222,7 +318,24 @@ const Dashboard: React.FC = () => {
                         <span className="feature-chip mb-2">Skill Development</span>
                         <h2 className="text-xl font-semibold">Recommended Learning Paths</h2>
                       </div>
-                      <button className="text-career-blue-600 font-medium hover:underline">Explore All Courses</button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex items-center gap-1"
+                          onClick={refreshLearningPaths}
+                          disabled={isGeneratingPaths}
+                        >
+                          <RefreshCcw size={16} className={isGeneratingPaths ? "animate-spin" : ""} />
+                          <span>Refresh with AI</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                        >
+                          Explore All Courses
+                        </Button>
+                      </div>
                     </div>
                     
                     <div className="space-y-4">
