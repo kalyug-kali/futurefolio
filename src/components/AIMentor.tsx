@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User } from 'lucide-react';
+import { Bot, Send, User, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ interface Message {
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  isError?: boolean;
 }
 
 const AIMentor: React.FC = () => {
@@ -27,6 +28,7 @@ const AIMentor: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,10 +45,13 @@ const AIMentor: React.FC = () => {
     
     if (!inputValue.trim() || isLoading) return;
     
+    const messageText = inputValue.trim();
+    setLastUserMessage(messageText);
+    
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue.trim(),
+      content: messageText,
       role: 'user',
       timestamp: new Date()
     };
@@ -57,7 +62,7 @@ const AIMentor: React.FC = () => {
     
     try {
       // Generate AI response
-      const response = await generateMentorResponse(userMessage.content);
+      const response = await generateMentorResponse(messageText);
       
       if (response) {
         const assistantMessage: Message = {
@@ -68,10 +73,82 @@ const AIMentor: React.FC = () => {
         };
         
         setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        // Handle error case
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "I'm sorry, I couldn't generate a response. Please try again or ask a different question.",
+          role: 'assistant',
+          timestamp: new Date(),
+          isError: true
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error("Error in mentor chat:", error);
-      toast.error("Failed to get response from AI mentor. Please try again.");
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, there was an error processing your request. Please try again later.",
+        role: 'assistant',
+        timestamp: new Date(),
+        isError: true
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!lastUserMessage || isLoading) return;
+    
+    setIsLoading(true);
+    
+    // Remove the last error message
+    setMessages(prev => prev.filter(msg => !msg.isError));
+    
+    try {
+      // Retry generating AI response
+      const response = await generateMentorResponse(lastUserMessage);
+      
+      if (response) {
+        const assistantMessage: Message = {
+          id: Date.now().toString(),
+          content: response,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        // Handle error case
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          content: "I'm still having trouble generating a response. Please try asking a different question.",
+          role: 'assistant',
+          timestamp: new Date(),
+          isError: true
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      console.error("Error in mentor chat retry:", error);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: "I'm sorry, there was an error processing your request. Please try again later.",
+        role: 'assistant',
+        timestamp: new Date(),
+        isError: true
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -123,14 +200,29 @@ const AIMentor: React.FC = () => {
                     <div className={`py-2 px-3 rounded-lg ${
                       message.role === 'user' 
                         ? 'bg-career-blue-500 text-white rounded-tr-none' 
-                        : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                        : message.isError
+                          ? 'bg-red-50 text-red-800 border border-red-100 rounded-tl-none'
+                          : 'bg-gray-100 text-gray-800 rounded-tl-none'
                     }`}>
                       <p className="text-sm">{message.content}</p>
-                      <span className={`text-xs block mt-1 ${
-                        message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {formatTime(message.timestamp)}
-                      </span>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className={`text-xs ${
+                          message.role === 'user' ? 'text-blue-100' : message.isError ? 'text-red-500' : 'text-gray-500'
+                        }`}>
+                          {formatTime(message.timestamp)}
+                        </span>
+                        
+                        {message.isError && (
+                          <button 
+                            onClick={handleRetry}
+                            className="text-xs flex items-center text-red-600 hover:text-red-700 ml-2"
+                            disabled={isLoading}
+                          >
+                            <RefreshCw size={12} className="mr-1" />
+                            Retry
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>

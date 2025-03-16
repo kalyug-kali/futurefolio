@@ -1,12 +1,23 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import AssessmentQuiz from '../components/AssessmentQuiz';
+import PersonalizedLearningPath from '../components/PersonalizedLearningPath';
 import { motion } from 'framer-motion';
 import AnimatedTransition from '../components/AnimatedTransition';
 
 const Assessment: React.FC = () => {
+  const [showLearningPath, setShowLearningPath] = useState(false);
+  
+  useEffect(() => {
+    // Check if learning path exists in sessionStorage
+    const storedPath = sessionStorage.getItem('personalizedLearningPath');
+    if (storedPath) {
+      setShowLearningPath(true);
+    }
+  }, []);
+  
   return (
     <AnimatedTransition>
       <div className="min-h-screen flex flex-col">
@@ -27,30 +38,36 @@ const Assessment: React.FC = () => {
               </p>
             </motion.div>
             
-            <AssessmentQuiz />
+            {!showLearningPath ? (
+              <AssessmentQuiz />
+            ) : (
+              <PersonalizedLearningPath />
+            )}
             
-            <div className="mt-12 bg-career-blue-50 rounded-xl p-6 max-w-2xl mx-auto">
-              <h3 className="text-lg font-semibold mb-2">Why This Assessment Matters</h3>
-              <p className="text-gray-700 mb-4">
-                Our AI-powered assessment analyzes multiple factors to provide accurate career recommendations:
-              </p>
-              <ul className="space-y-2">
-                {[
-                  "Your natural skills and aptitudes",
-                  "Work environment preferences",
-                  "Value alignment with different industries",
-                  "Problem-solving approach and thinking style",
-                  "Social interaction preferences"
-                ].map((item, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="w-5 h-5 rounded-full bg-career-blue-100 text-career-blue-600 flex items-center justify-center text-xs mr-3 mt-0.5">
-                      {index + 1}
-                    </span>
-                    <span className="text-gray-700">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {!showLearningPath && (
+              <div className="mt-12 bg-career-blue-50 rounded-xl p-6 max-w-2xl mx-auto">
+                <h3 className="text-lg font-semibold mb-2">Why This Assessment Matters</h3>
+                <p className="text-gray-700 mb-4">
+                  Our AI-powered assessment analyzes multiple factors to provide accurate career recommendations:
+                </p>
+                <ul className="space-y-2">
+                  {[
+                    "Your natural skills and aptitudes",
+                    "Work environment preferences",
+                    "Value alignment with different industries",
+                    "Problem-solving approach and thinking style",
+                    "Social interaction preferences"
+                  ].map((item, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="w-5 h-5 rounded-full bg-career-blue-100 text-career-blue-600 flex items-center justify-center text-xs mr-3 mt-0.5">
+                        {index + 1}
+                      </span>
+                      <span className="text-gray-700">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </main>
         

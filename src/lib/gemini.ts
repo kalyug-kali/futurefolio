@@ -1,3 +1,4 @@
+
 // Gemini API utilities
 import { toast } from "@/hooks/use-toast-variants";
 
@@ -11,6 +12,10 @@ interface GeminiResponse {
       }[];
     };
   }[];
+  error?: {
+    message: string;
+    code: number;
+  };
 }
 
 interface GeminiPromptParams {
@@ -32,57 +37,78 @@ export async function generateGeminiResponse(prompt: string, options: {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
+  retryCount?: number;
 } = {}) {
-  const { temperature = 0.7, maxTokens = 800, systemPrompt } = options;
+  const { temperature = 0.7, maxTokens = 800, systemPrompt, retryCount = 2 } = options;
+  let retries = 0;
+  
+  const makeRequest = async () => {
+    try {
+      const promptParams: GeminiPromptParams = {
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }]
+          }
+        ],
+        generationConfig: {
+          temperature,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: maxTokens
+        }
+      };
+      
+      if (systemPrompt) {
+        promptParams.contents.unshift({
+          role: "system",
+          parts: [{ text: systemPrompt }]
+        });
+      }
+      
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_API_KEY,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(promptParams)
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Gemini API error:", errorData);
+        throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+      
+      const data: GeminiResponse = await response.json();
+      
+      if (data.error) {
+        throw new Error(`Gemini API error: ${data.error.message}`);
+      }
+      
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error("No response generated from Gemini API");
+      }
+      
+      return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      if (retries < retryCount) {
+        retries++;
+        console.log(`Retrying Gemini API request (${retries}/${retryCount})...`);
+        return makeRequest();
+      }
+      throw error;
+    }
+  };
   
   try {
-    const promptParams: GeminiPromptParams = {
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }]
-        }
-      ],
-      generationConfig: {
-        temperature,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: maxTokens
-      }
-    };
-    
-    if (systemPrompt) {
-      promptParams.contents.unshift({
-        role: "system",
-        parts: [{ text: systemPrompt }]
-      });
-    }
-    
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_API_KEY,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(promptParams)
-      }
-    );
-    
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-    
-    const data: GeminiResponse = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error("No response generated");
-    }
-    
-    return data.candidates[0].content.parts[0].text;
+    return await makeRequest();
   } catch (error) {
     console.error("Error generating Gemini response:", error);
-    toast.error("Failed to generate AI response. Please try again.");
+    toast.error("Failed to generate AI response. Please try again later.");
     return null;
   }
 }
@@ -165,6 +191,77 @@ export async function generateLearningPaths(career: string) {
   } catch (e) {
     console.error("Failed to parse Gemini response:", e);
     toast.error("Failed to process AI learning paths. Please try again.");
+    return null;
+  }
+}
+
+export async function generatePersonalizedLearningPath(skills: string[], interests: string[], quizAnswers: Record<number, number>) {
+  // Convert quiz answers to meaningful insights
+  const answerMeanings = [
+    "Problem-solving approach", 
+    "Team role preference",
+    "Work environment preference",
+    "Learning style",
+    "Career values"
+  ];
+  
+  const insightsText = Object.entries(quizAnswers)
+    .map(([questionId, answerIndex]) => {
+      const questionNumber = parseInt(questionId) - 1;
+      return `${answerMeanings[questionNumber]}: Option ${answerIndex + 1}`;
+    })
+    .join('\n');
+  
+  const prompt = `
+    Based on the following information about a user, create a personalized learning path:
+    
+    Skills: ${skills.join(', ')}
+    Interests: ${interests.join(', ')}
+    
+    Assessment Results:
+    ${insightsText}
+    
+    Generate a personalized learning path with:
+    1. A recommended career direction
+    2. 3-5 specific courses or resources to learn required skills
+    3. Estimated timeline (in months)
+    4. Learning milestones
+    
+    Format as JSON like:
+    {
+      "careerDirection": "Recommended career path",
+      "description": "Brief explanation of why this path fits their profile",
+      "courses": [
+        {
+          "title": "Course Title",
+          "provider": "Provider Name",
+          "duration": "X weeks",
+          "level": "Difficulty Level",
+          "description": "What this course covers",
+          "link": "example.com/course"
+        }
+      ],
+      "timeline": "X months",
+      "milestones": [
+        "Milestone 1 description",
+        "Milestone 2 description"
+      ]
+    }
+  `;
+  
+  const response = await generateGeminiResponse(prompt, { 
+    temperature: 0.7,
+    maxTokens: 1000,
+    systemPrompt: "You are an educational advisor AI specializing in personalized learning paths based on skills, interests, and assessment results." 
+  });
+  
+  if (!response) return null;
+  
+  try {
+    return JSON.parse(response);
+  } catch (e) {
+    console.error("Failed to parse Gemini response:", e);
+    toast.error("Failed to generate personalized learning path. Please try again.");
     return null;
   }
 }

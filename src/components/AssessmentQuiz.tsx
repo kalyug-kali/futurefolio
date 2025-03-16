@@ -1,8 +1,10 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ChevronRight, ChevronLeft, CheckCircle2, Loader } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from "@/hooks/use-toast-variants";
+import { generatePersonalizedLearningPath } from '@/lib/gemini';
 
 interface Question {
   id: number;
@@ -63,10 +65,29 @@ const questions: Question[] = [
   }
 ];
 
+// Sample skills and interests for the AI to use
+const sampleSkills = [
+  "Problem-solving",
+  "Communication",
+  "Analytical thinking",
+  "Creativity",
+  "Attention to detail"
+];
+
+const sampleInterests = [
+  "Technology",
+  "Data analysis",
+  "Design",
+  "People management",
+  "Innovation"
+];
+
 const AssessmentQuiz: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isGeneratingPath, setIsGeneratingPath] = useState(false);
+  const navigate = useNavigate();
   
   const currentQuestion = questions[currentQuestionIndex];
   
@@ -76,6 +97,7 @@ const AssessmentQuiz: React.FC = () => {
     } else {
       // Quiz completed
       setIsCompleted(true);
+      generateLearningPath();
     }
   };
   
@@ -98,6 +120,36 @@ const AssessmentQuiz: React.FC = () => {
   
   const isCurrentQuestionAnswered = () => {
     return answers[currentQuestion.id] !== undefined;
+  };
+  
+  const generateLearningPath = async () => {
+    setIsGeneratingPath(true);
+    
+    try {
+      // Generate personalized learning path based on quiz answers
+      const learningPath = await generatePersonalizedLearningPath(
+        sampleSkills,
+        sampleInterests,
+        answers
+      );
+      
+      if (learningPath) {
+        // Store the learning path in sessionStorage to access it in the Dashboard
+        sessionStorage.setItem('personalizedLearningPath', JSON.stringify(learningPath));
+        toast.success("Your personalized learning path has been generated!");
+      } else {
+        toast.error("Failed to generate your learning path. We'll use default recommendations instead.");
+      }
+    } catch (error) {
+      console.error("Error generating learning path:", error);
+      toast.error("Something went wrong. Please try again later.");
+    } finally {
+      setIsGeneratingPath(false);
+    }
+  };
+  
+  const handleViewResults = () => {
+    navigate('/dashboard');
   };
   
   return (
@@ -198,21 +250,33 @@ const AssessmentQuiz: React.FC = () => {
             transition={{ duration: 0.5 }}
             className="bg-white rounded-xl shadow-card p-8 text-center"
           >
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 size={40} className="text-green-600" />
-            </div>
-            
-            <h2 className="text-2xl font-bold mb-2">Assessment Completed!</h2>
-            <p className="text-gray-600 mb-8">
-              Thank you for completing the assessment. We're analyzing your answers to provide personalized career recommendations.
-            </p>
-            
-            <Link 
-              to="/dashboard" 
-              className="btn-primary inline-block"
-            >
-              View Your Results
-            </Link>
+            {isGeneratingPath ? (
+              <>
+                <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
+                  <Loader size={40} className="text-career-blue-500 animate-spin" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Creating Your Learning Path...</h2>
+                <p className="text-gray-600 mb-8">
+                  Our AI is analyzing your responses to generate a personalized learning path tailored to your preferences.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle2 size={40} className="text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Assessment Completed!</h2>
+                <p className="text-gray-600 mb-8">
+                  Thank you for completing the assessment. We've analyzed your answers and created a personalized learning path for you.
+                </p>
+                <button 
+                  onClick={handleViewResults}
+                  className="btn-primary inline-block"
+                >
+                  View Your Results
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
