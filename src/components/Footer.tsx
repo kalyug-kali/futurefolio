@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
               <div className="w-10 h-10 rounded-xl bg-career-blue-500 flex items-center justify-center text-white font-bold">
                 CN
               </div>
-              <span className="text-xl font-display font-medium">CareerNavigator</span>
+              <span className="text-xl font-display font-medium">FutureFolio</span>
             </Link>
             <p className="text-gray-600 mb-4">
               Empowering career decisions with AI-driven insights and personalized guidance.
@@ -65,20 +65,20 @@ const Footer: React.FC = () => {
               <li className="flex items-start">
                 <MapPin size={18} className="text-career-blue-500 mr-2 mt-0.5" />
                 <span className="text-gray-600">
-                  123 Innovation Street<br />
-                  Tech City, TC 10101
+                  DELHI <br />
+                  INDIA
                 </span>
               </li>
               <li className="flex items-center">
                 <Mail size={18} className="text-career-blue-500 mr-2" />
-                <a href="mailto:contact@careernavigator.ai" className="text-gray-600 hover:text-career-blue-600">
-                  contact@careernavigator.ai
+                <a href="mailto:contact@FutureFolio.ai" className="text-gray-600 hover:text-career-blue-600">
+                  contact@FutureFolio.ai
                 </a>
               </li>
               <li className="flex items-center">
                 <Phone size={18} className="text-career-blue-500 mr-2" />
                 <a href="tel:+1234567890" className="text-gray-600 hover:text-career-blue-600">
-                  +1 (234) 567-890
+                  +911239482242
                 </a>
               </li>
             </ul>
@@ -87,7 +87,7 @@ const Footer: React.FC = () => {
         
         <div className="border-t border-gray-100 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm">
-            © {currentYear} CareerNavigator. All rights reserved.
+            © {currentYear} FutureFolio. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <a href="#" className="text-sm text-gray-500 hover:text-career-blue-600">Privacy Policy</a>

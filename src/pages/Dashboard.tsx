@@ -165,7 +165,7 @@ const Dashboard: React.FC = () => {
                       <div className="w-20 h-20 rounded-full bg-career-blue-100 flex items-center justify-center text-career-blue-500 text-2xl font-bold mb-3">
                         JP
                       </div>
-                      <h3 className="text-lg font-semibold">John Peterson</h3>
+                      <h3 className="text-lg font-semibold">Ritika</h3>
                       <p className="text-gray-600 text-sm">Assessment completed</p>
                     </div>
                     

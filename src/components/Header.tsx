@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -44,9 +43,9 @@ const Header: React.FC = () => {
             transition={{ duration: 0.5 }}
             className="w-10 h-10 rounded-xl bg-career-blue-500 flex items-center justify-center text-white font-bold shadow-lg"
           >
-            CN
+            FF
           </motion.div>
-          <span className="text-xl font-display font-medium tracking-tight">CareerNavigator</span>
+          <span className="text-xl font-display font-medium tracking-tight">FutureFolio</span>
         </Link>
 
         {/* Desktop Navigation */}

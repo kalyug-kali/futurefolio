@@ -124,7 +124,7 @@ const Index: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 {
-                  name: "Sarah Johnson",
+                  name: "Ritika",
                   role: "UX Designer at Google",
                   image: "https://i.pravatar.cc/150?img=1",
                   quote: "The career assessment accurately identified my strengths in visual thinking and problem-solving. Following the personalized learning path helped me transition into UX design and land my dream job."
