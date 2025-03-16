@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
@@ -13,7 +12,7 @@ const Footer: React.FC = () => {
           <div className="col-span-1 md:col-span-1">
             <Link to="/" className="flex items-center space-x-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-career-blue-500 flex items-center justify-center text-white font-bold">
-                CN
+                FF
               </div>
               <span className="text-xl font-display font-medium">FutureFolio</span>
             </Link>

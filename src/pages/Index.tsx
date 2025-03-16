@@ -130,13 +130,13 @@ const Index: React.FC = () => {
                   quote: "The career assessment accurately identified my strengths in visual thinking and problem-solving. Following the personalized learning path helped me transition into UX design and land my dream job."
                 },
                 {
-                  name: "David Chen",
+                  name: "Abhinav mehra",
                   role: "Data Scientist at Amazon",
                   image: "https://i.pravatar.cc/150?img=8",
                   quote: "I was unsure about which technical path to pursue. The AI matched me with data science and provided a roadmap that helped me acquire the right skills in the right order."
                 },
                 {
-                  name: "Maria Rodriguez",
+                  name: "Priyanshi",
                   role: "Product Manager at Microsoft",
                   image: "https://i.pravatar.cc/150?img=5",
                   quote: "After 5 years in marketing, I wanted a change. The platform suggested product management as a perfect fit for my skills, and connected me with mentors who guided my transition."
