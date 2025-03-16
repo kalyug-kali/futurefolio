@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 import { Book, Briefcase, Users, Award, TrendingUp, MapPin, Bot, RefreshCcw } from 'lucide-react';
 import AnimatedTransition from '../components/AnimatedTransition';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast-variants';
 import { generateCareerMatches, generateLearningPaths } from '@/lib/gemini';
 
 const Dashboard: React.FC = () => {

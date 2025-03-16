@@ -1,5 +1,6 @@
+
 // Gemini API utilities
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast-variants";
 
 const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; // Replace with your actual API key or use env variable
 
