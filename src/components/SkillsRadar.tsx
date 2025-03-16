@@ -1,6 +1,4 @@
-
 import React, { useEffect, useRef } from 'react';
-import { Chart } from 'recharts';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 interface SkillsRadarProps {
