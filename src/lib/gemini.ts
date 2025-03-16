@@ -16,6 +16,9 @@ interface GeminiResponse {
     message: string;
     code: number;
   };
+  promptFeedback?: {
+    blockReason?: string;
+  };
 }
 
 interface GeminiPromptParams {
@@ -30,17 +33,33 @@ interface GeminiPromptParams {
     topK?: number;
     topP?: number;
     maxOutputTokens?: number;
+    stopSequences?: string[];
   };
+  safetySettings?: {
+    category: string;
+    threshold: string;
+  }[];
 }
 
+// Enhanced error handling and retry logic
 export async function generateGeminiResponse(prompt: string, options: {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
   retryCount?: number;
+  timeoutMs?: number;
 } = {}) {
-  const { temperature = 0.7, maxTokens = 800, systemPrompt, retryCount = 2 } = options;
+  const { 
+    temperature = 0.7, 
+    maxTokens = 800, 
+    systemPrompt, 
+    retryCount = 3,
+    timeoutMs = 30000  // 30 seconds timeout
+  } = options;
+  
   let retries = 0;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   const makeRequest = async () => {
     try {
@@ -56,7 +75,26 @@ export async function generateGeminiResponse(prompt: string, options: {
           topK: 40,
           topP: 0.95,
           maxOutputTokens: maxTokens
-        }
+        },
+        // Add safety settings to prevent over-filtering
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_ONLY_HIGH"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_ONLY_HIGH"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_ONLY_HIGH"
+          },
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_ONLY_HIGH"
+          }
+        ]
       };
       
       if (systemPrompt) {
@@ -66,6 +104,8 @@ export async function generateGeminiResponse(prompt: string, options: {
         });
       }
       
+      console.log("Sending request to Gemini API...");
+      
       const response = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_API_KEY,
         {
@@ -73,17 +113,32 @@ export async function generateGeminiResponse(prompt: string, options: {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(promptParams)
+          body: JSON.stringify(promptParams),
+          signal: controller.signal
         }
       );
       
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Gemini API error:", errorData);
+        console.error("Gemini API error response:", errorData);
+        
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        }
+        
         throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
       }
       
       const data: GeminiResponse = await response.json();
+      console.log("Gemini API response received:", data);
+      
+      // Check for content filtering blocks
+      if (data.promptFeedback?.blockReason) {
+        throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
+      }
       
       if (data.error) {
         throw new Error(`Gemini API error: ${data.error.message}`);
@@ -93,22 +148,37 @@ export async function generateGeminiResponse(prompt: string, options: {
         throw new Error("No response generated from Gemini API");
       }
       
-      return data.candidates[0].content.parts[0].text;
-    } catch (error) {
+      // Process and return the text response
+      const responseText = data.candidates[0].content.parts[0].text;
+      return responseText;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error("Gemini API request timed out");
+        throw new Error("Request timed out. Please try again.");
+      }
+      
       if (retries < retryCount) {
         retries++;
-        console.log(`Retrying Gemini API request (${retries}/${retryCount})...`);
+        const backoffTime = Math.min(1000 * Math.pow(2, retries), 10000); // Exponential backoff, max 10 seconds
+        console.log(`Retrying Gemini API request (${retries}/${retryCount}) after ${backoffTime}ms...`);
+        
+        // Wait before retrying with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
         return makeRequest();
       }
+      
       throw error;
     }
   };
   
   try {
-    return await makeRequest();
-  } catch (error) {
+    const result = await makeRequest();
+    return result;
+  } catch (error: any) {
     console.error("Error generating Gemini response:", error);
-    toast.error("Failed to generate AI response. Please try again later.");
+    toast.error(error.message || "Failed to generate AI response. Please try again later.");
     return null;
   }
 }
@@ -277,10 +347,14 @@ export async function generateMentorResponse(question: string, careerContext?: s
     
     Provide a helpful, informative and encouraging response as an AI career mentor.
     Keep the response concise (max 150 words) but insightful.
+    Use a friendly, conversational tone.
+    If you don't know the answer, just say so instead of making things up.
   `;
   
   return generateGeminiResponse(prompt, { 
     temperature: 0.8,
-    systemPrompt: "You are an AI mentor who specializes in career guidance. Be supportive, encouraging, and give practical advice." 
+    systemPrompt: "You are an AI mentor who specializes in career guidance. Be supportive, encouraging, and give practical advice.", 
+    retryCount: 3,
+    timeoutMs: 15000
   });
 }
